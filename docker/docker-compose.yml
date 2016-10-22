@@ -1,0 +1,31 @@
+version: '2'
+
+services:
+  web:
+    image: simple-api:latest
+    container_name: simple-api-web
+    ports:
+      - "5000:5000"
+    networks:
+      - simple-api-net
+
+  db:
+    image: mongo:3.3.15
+    container_name: simple-api-db
+    ports:
+      - "27017:27017"
+    networks:
+      - simple-api-net
+    volumes:
+      - simple-api-db-data:/data/db
+      - simple-api-db-config:/data/configdb
+
+volumes:
+  simple-api-db-data:
+    driver: local
+  simple-api-db-config:
+    driver: local
+
+networks:
+  simple-api-net:
+
