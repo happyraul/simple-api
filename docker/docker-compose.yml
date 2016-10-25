@@ -4,13 +4,15 @@ services:
   web:
     image: simple-api:latest
     container_name: simple-api-web
+    environment:
+      APP_MONGO_HOST: db
     ports:
       - "5000:5000"
     networks:
       - simple-api-net
 
   db:
-    image: mongo:3.3.15
+    image: simple-api-db:latest
     container_name: simple-api-db
     ports:
       - "27017:27017"
