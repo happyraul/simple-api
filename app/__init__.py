@@ -7,7 +7,6 @@ Simple API
 
 import os as _os
 
-from bson import json_util as _json
 import flask as _flask
 import pymongo as _mongo
 
@@ -47,16 +46,16 @@ def create_studies(db):
     """ Insert new studies into mongo from request data """
     if _flask.request.is_json:
         request_data = _flask.request.get_json()
-        
+
         if request_data.get('data') and \
                 isinstance(request_data['data'], list):
             records = 0
-            
+
             for record in request_data.get('data'):
                 records += create_study(db, record)
-            
+
             return _flask.jsonify(dict(data=[dict(records=records)]))
-    
+
     return _flask.jsonify(
         dict(data=[dict(records=0, reason='Invalid request')])), 400
 
@@ -67,7 +66,7 @@ def create_study(db, record):
         db.studies.insert(record)
         return 1
     return 0
-            
+
 
 def valid_record(record):
     """ Check if a record is valid """
@@ -84,4 +83,3 @@ def valid_record(record):
 def to_dict(obj):
     """ Transform mongo document to serializable dict """
     return dict(obj, _id=str(obj['_id']))
-
