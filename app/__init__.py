@@ -5,8 +5,10 @@ Simple API
 
 """
 
+import datetime as _dt
 import os as _os
 
+import bson as _bson
 import flask as _flask
 import pymongo as _mongo
 
@@ -21,11 +23,44 @@ def create_app():
 
     @app.route('/studies', methods=['POST', 'GET'])
     def studies():
-        """ Studies view handler """
+        """ Studies list handler """
         if _flask.request.method == 'GET':
-            return get_studies(get_db())
+            return get_studies(get_db(), user=_flask.request.args.get('user'))
         elif _flask.request.method == 'POST':
             return create_studies(get_db())
+
+    @app.route('/submissions/', methods=['GET'])
+    def submissions():
+        """ Submissions for study handler"""
+        args = _flask.request.args
+        return get_submissions(
+            get_db(), study=args.get('study'), user=args.get('user'))
+
+    @app.route('/submission/<study_id>', methods=['POST'])
+    def submit(study_id):
+        """ Study submission handler """
+        if _flask.request.is_json:
+            request_data = _flask.request.get_json()
+            db = get_db()
+            study = None
+
+            try:
+                study = db.studies.find_one(dict(_id=_bson.ObjectId(study_id)))
+            except _mongo.errors.InvalidId:
+                pass
+
+            if not study:
+                return _flask.jsonify(
+                    dict(data=[dict(records=0,
+                                    reason='Study not found.')])), 404
+
+            if request_data.get('data') and \
+                    valid_submission(request_data.get('data')):
+                return create_submission(
+                    db, study, request_data.get('data'))
+
+        return _flask.jsonify(
+            dict(data=[dict(records=0, reason='Invalid request')])), 400
 
     def get_db():
         """ Return mongo db """
@@ -35,11 +70,41 @@ def create_app():
     return app
 
 
-def get_studies(db):
+def get_studies(db, user=None):
     """ Query mongo for list of studies """
+    if user:
+        query = dict(user=user)
+    else:
+        query = dict()
     studies = dict(
-        data=[to_dict(study) for study in db.studies.find()])
+        data=[to_dict(study) for study in db.studies.find(query)])
     return _flask.jsonify(studies)
+
+
+def get_submissions(db, study=None, user=None):
+    if study and user:
+        return _flask.jsonify(
+            dict(data=dict(reason='Specify user or study, not both.')))
+
+    if not (study or user):
+        return _flask.jsonify(
+            dict(data=dict(reason='Specify user or study.')))
+
+    if study:
+        try:
+            oid = _bson.ObjectId(oid=study)
+            query = dict(study=oid)
+        except _bson.errors.InvalidId:
+            return _flask.jsonify(dict(data=[]))
+
+    elif user:
+        query = dict(user=user)
+
+    submissions = dict(
+        data=[to_dict(submission, fields=('_id', 'study'))
+              for submission in db.submissions.find(query)])
+
+    return _flask.jsonify(submissions)
 
 
 def create_studies(db):
@@ -62,13 +127,31 @@ def create_studies(db):
 
 def create_study(db, record):
     """ Insert a study into mongo """
-    if valid_record(record):
+    if valid_study(record):
         db.studies.insert(record)
         return 1
     return 0
 
 
-def valid_record(record):
+def create_submission(db, study, record):
+    """ Insert a submission into mongo """
+    if not has_remaining_places(db, study):
+        return _flask.jsonify(
+            dict(data=[dict(records=0, reason='Study is full.')])), 400
+    try:
+        db.submissions.insert(
+            dict(user=record['user'], created_at=_dt.datetime.now(),
+                 study=_bson.ObjectId(oid=study['_id'])))
+        return _flask.jsonify(dict(data=[dict(records=1)]))
+
+    except _mongo.errors.DuplicateKeyError:
+        return _flask.jsonify(
+            dict(data=[dict(records=0,
+                            reason='Only one submission for a study is '
+                                   'allowed per user.')])), 400
+
+
+def valid_study(record):
     """ Check if a record is valid """
     if not isinstance(record, dict) or \
             set(record.keys()) != {'available_places', 'name', 'user'} or \
@@ -80,6 +163,22 @@ def valid_record(record):
     return True
 
 
-def to_dict(obj):
+def valid_submission(record):
+    """ Check if a record is valid """
+    if not isinstance(record, dict) or \
+            set(record.keys()) != {'user'} or \
+            not isinstance(record['user'], str):
+        return False
+
+    return True
+
+
+def has_remaining_places(db, study):
+    """ Check if study has remaining submissions """
+    num_submissions = db.submissions.count(dict(study=study['_id']))
+    return study['available_places'] > num_submissions
+
+
+def to_dict(obj, fields=('_id',)):
     """ Transform mongo document to serializable dict """
-    return dict(obj, _id=str(obj['_id']))
+    return dict(obj, **{key: str(obj[key]) for key in fields})
