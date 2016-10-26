@@ -1,0 +1,6 @@
+# Requirements for local development
+
+bpython
+invoke == 0.13.0
+
+-r requirements.txt

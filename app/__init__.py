@@ -82,6 +82,7 @@ def get_studies(db, user=None):
 
 
 def get_submissions(db, study=None, user=None):
+    """ Query mongo for list of submissions for a user or study """
     if study and user:
         return _flask.jsonify(
             dict(data=dict(reason='Specify user or study, not both.')))
