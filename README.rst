@@ -14,14 +14,16 @@ Installation
 Running the service
 -------------------
 
-The recommended way is using Docker:
+Make sure nothing else is running on your machine on ports 5000 and 27017
+(default mongodb port). The recommended way is using Docker:
 
 .. code-block:: bash
 
     $ inv docker.build
     $ docker-compose -f docker/docker-compose.yml up -d
 
-This will start a server that is accessible at http://127.0.0.1:5000/
+This will start a server that is accessible at http://127.0.0.1:5000/. A
+mongodb instance will also start on the default port.
 
 Usage
 ----------
@@ -71,7 +73,8 @@ List all studies belonging to a user:
     }
 
 
-Create a new submission:
+Create a new submission (Note that the request URL will vary from the examples
+below based on the study ID in your database):
 
 .. code-block:: bash
 
@@ -105,7 +108,8 @@ Create a new submission:
         }]
     }
 
-List all submissions within a study:
+List all submissions within a study (Once again, the request URL will depend on
+the study ID):
 
 .. code-block:: bash
 
@@ -124,7 +128,7 @@ List all submissions within a study:
         }]
     }
 
-List all submissions belonging to a user
+List all submissions belonging to a user:
 
 .. code-block:: bash
 
