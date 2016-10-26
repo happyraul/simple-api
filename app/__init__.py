@@ -127,7 +127,10 @@ def create_studies(db):
 
 
 def create_study(db, record):
-    """ Insert a study into mongo """
+    """ Insert a study into mongo
+    >>> create_study(None, {})
+    0
+    """
     if valid_study(record):
         db.studies.insert(record)
         return 1
@@ -153,7 +156,26 @@ def create_submission(db, study, record):
 
 
 def valid_study(record):
-    """ Check if a record is valid """
+    """ Check if a record is valid
+    >>> valid_study(None)
+    False
+    >>> valid_study([])
+    False
+    >>> valid_study(dict())
+    False
+    >>> valid_study(dict(a='123'))
+    False
+    >>> valid_study(dict(user='123', available_places=123, name='123', foo=3))
+    False
+    >>> valid_study(dict(user=123, available_places=123, name='123'))
+    False
+    >>> valid_study(dict(user='123', available_places='123', name='123'))
+    False
+    >>> valid_study(dict(user='123', available_places=123, name=123))
+    False
+    >>> valid_study(dict(user='123', available_places=123, name='123'))
+    True
+    """
     if not isinstance(record, dict) or \
             set(record.keys()) != {'available_places', 'name', 'user'} or \
             not isinstance(record['available_places'], int) or \
@@ -165,7 +187,22 @@ def valid_study(record):
 
 
 def valid_submission(record):
-    """ Check if a record is valid """
+    """ Check if a record is valid
+    >>> valid_submission(None)
+    False
+    >>> valid_submission([])
+    False
+    >>> valid_submission(dict())
+    False
+    >>> valid_submission(dict(a='123'))
+    False
+    >>> valid_submission(dict(user='123', bar='bar'))
+    False
+    >>> valid_submission(dict(user=123))
+    False
+    >>> valid_submission(dict(user='123'))
+    True
+    """
     if not isinstance(record, dict) or \
             set(record.keys()) != {'user'} or \
             not isinstance(record['user'], str):
@@ -181,5 +218,12 @@ def has_remaining_places(db, study):
 
 
 def to_dict(obj, fields=('_id',)):
-    """ Transform mongo document to serializable dict """
+    """ Transform mongo document to serializable dict
+    >>> item = dict(a=_bson.ObjectId('58110204354f8600145fbedd'), b=123)
+    >>> transformed = to_dict(item, fields=('a'))
+    >>> transformed['a'] == '58110204354f8600145fbedd'
+    True
+    >>> transformed['b'] == 123
+    True
+    """
     return dict(obj, **{key: str(obj[key]) for key in fields})
